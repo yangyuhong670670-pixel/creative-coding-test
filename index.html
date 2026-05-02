@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Martin的動態圖文生成藝術</title>
+    <title>Yang Yu-Hong 的動態圖文生成藝術</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tweakpane@3.1.9/dist/tweakpane.min.js"></script>
@@ -26,17 +26,20 @@
             rows: 8,
             baseScale: 1.0,
             shape: 'text',
+            textContent: '宇紘',
 
-            dynamicMode: 'wave', // 預設模式
+            dynamicMode: 'wave',
             speed: 0.05,
-            waveFrequency: 0.15,
+            waveX: 0.15,
+            waveY: 0.15,
             rotationAmp: 180,
 
             color: '#ffffff',
             bgColor: '#141414',
             isWireframe: false,
-
-            textContent: 'M'
+            isGradient: false,
+            colorStart: '#00ffff',
+            colorEnd: '#ff00ff'
         };
 
         const pane = new Tweakpane.Pane({ title: 'VJ 視覺控制台' });
@@ -46,14 +49,24 @@
         f1.addInput(PARAMS, 'columns', { min: 1, max: 50, step: 1, label: '直行數量' });
         f1.addInput(PARAMS, 'rows', { min: 1, max: 50, step: 1, label: '橫列數量' });
         f1.addInput(PARAMS, 'baseScale', { min: 0.01, max: 3.0, label: '基礎大小' });
-        f1.addInput(PARAMS, 'shape', {
+
+        const shapeSelect = f1.addInput(PARAMS, 'shape', {
             options: { 方塊: 'rect', 圓形: 'circle', 線條: 'line', 文字: 'text', 自訂圖片: 'image' },
             label: '圖形種類'
         });
 
-        // --- 資料夾 2：自訂素材匯入 ---
-        const f2 = pane.addFolder({ title: '自訂素材匯入' });
-        f2.addInput(PARAMS, 'textContent', { label: '輸入文字' });
+        const textInput = f1.addInput(PARAMS, 'textContent', { label: '輸入文字' });
+
+        shapeSelect.on('change', (ev) => {
+            if (ev.value === 'text') {
+                textInput.hidden = false;
+            } else {
+                textInput.hidden = true;
+            }
+        });
+
+        // --- 資料夾 2：自訂圖片匯入 ---
+        const f2 = pane.addFolder({ title: '自訂圖片匯入' });
 
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
@@ -62,34 +75,78 @@
             const file = e.target.files[0];
             if (file) {
                 const url = URL.createObjectURL(file);
+
+                // 退回最單純的 loadImage 邏輯，不管什麼檔案都當靜態圖處理
                 loadImage(url, (img) => {
                     customImage = img;
                     PARAMS.shape = 'image';
+                    textInput.hidden = true;
                     pane.refresh();
                 });
             }
         };
+
         f2.addButton({ title: '📁 上傳本機圖片' }).on('click', () => {
             fileInput.click();
         });
 
+        f2.addButton({ title: '🗑️ 移除圖片' }).on('click', () => {
+            customImage = null;
+            fileInput.value = '';
+            if (PARAMS.shape === 'image') {
+                PARAMS.shape = 'rect';
+                pane.refresh();
+            }
+        });
+
         // --- 資料夾 3：波動力學 ---
         const f3 = pane.addFolder({ title: '波動力學' });
-        // 【修改】升級全新的動態模式
-        f3.addInput(PARAMS, 'dynamicMode', {
+
+        const dynamicModeSelect = f3.addInput(PARAMS, 'dynamicMode', {
             options: { 綜合波動: 'wave', 位置浮動: 'orbit', 滑動交錯: 'slide', 隨機抖動: 'jitter' },
             label: '動態模式'
         });
+
         f3.addInput(PARAMS, 'speed', { min: 0, max: 0.2, label: '流動速度' });
-        // 【修改】波浪密度最小值改為 0.00
-        f3.addInput(PARAMS, 'waveFrequency', { min: 0.00, max: 0.5, label: '波浪密度' });
-        f3.addInput(PARAMS, 'rotationAmp', { min: 0, max: 360, label: '旋轉幅度' });
+
+        const waveXInput = f3.addInput(PARAMS, 'waveX', { min: -0.5, max: 0.5, label: 'X軸 波浪方向' });
+        const waveYInput = f3.addInput(PARAMS, 'waveY', { min: -0.5, max: 0.5, label: 'Y軸 波浪方向' });
+        const rotAmpInput = f3.addInput(PARAMS, 'rotationAmp', { min: 0, max: 360, label: '旋轉幅度' });
+
+        dynamicModeSelect.on('change', (ev) => {
+            if (ev.value === 'wave') {
+                waveXInput.hidden = false;
+                waveYInput.hidden = false;
+                rotAmpInput.hidden = false;
+            } else {
+                waveXInput.hidden = true;
+                waveYInput.hidden = true;
+                rotAmpInput.hidden = true;
+            }
+        });
 
         // --- 資料夾 4：色彩與風格 ---
         const f4 = pane.addFolder({ title: '色彩與風格' });
-        f4.addInput(PARAMS, 'color', { label: '主色調' });
         f4.addInput(PARAMS, 'bgColor', { label: '背景色' });
         f4.addInput(PARAMS, 'isWireframe', { label: '線框模式' });
+
+        const colorInput = f4.addInput(PARAMS, 'color', { label: '單一主色調' });
+        const gradSwitch = f4.addInput(PARAMS, 'isGradient', { label: '開啟雙色漸變' });
+
+        const cStart = f4.addInput(PARAMS, 'colorStart', { label: '漸變起點色', hidden: true });
+        const cEnd = f4.addInput(PARAMS, 'colorEnd', { label: '漸變終點色', hidden: true });
+
+        gradSwitch.on('change', (ev) => {
+            if (ev.value) {
+                colorInput.hidden = true;
+                cStart.hidden = false;
+                cEnd.hidden = false;
+            } else {
+                colorInput.hidden = false;
+                cStart.hidden = true;
+                cEnd.hidden = true;
+            }
+        });
 
         function setup() {
             createCanvas(windowWidth, windowHeight);
@@ -100,20 +157,10 @@
         }
 
         function draw() {
-            // 隨機抖動模式搭配微透明背景，可以製造出殘影效果
             if (PARAMS.dynamicMode === 'jitter') {
                 background(color(PARAMS.bgColor).levels[0], color(PARAMS.bgColor).levels[1], color(PARAMS.bgColor).levels[2], 50);
             } else {
                 background(PARAMS.bgColor);
-            }
-
-            if (PARAMS.isWireframe) {
-                noFill();
-                stroke(PARAMS.color);
-                strokeWeight(2);
-            } else {
-                fill(PARAMS.color);
-                noStroke();
             }
 
             let cellW = width / PARAMS.columns;
@@ -125,7 +172,7 @@
                     let x = i * cellW + cellW / 2;
                     let y = j * cellH + cellH / 2;
 
-                    let offset = i * PARAMS.waveFrequency + j * PARAMS.waveFrequency;
+                    let offset = i * PARAMS.waveX + j * PARAMS.waveY;
                     let wave = sin(frameCount * PARAMS.speed + offset);
 
                     let dynamicAngle = 0;
@@ -133,25 +180,18 @@
                     let moveX = 0;
                     let moveY = 0;
 
-                    // 【核心邏輯】分配新的動態引擎
                     if (PARAMS.dynamicMode === 'wave') {
                         dynamicAngle = wave * PARAMS.rotationAmp;
                         dynamicScale = PARAMS.baseScale + wave * 0.5;
-                    }
-                    else if (PARAMS.dynamicMode === 'orbit') {
+                    } else if (PARAMS.dynamicMode === 'orbit') {
                         moveX = cos(frameCount * PARAMS.speed + offset) * (cellW * 0.5);
                         moveY = sin(frameCount * PARAMS.speed + offset) * (cellH * 0.5);
-                    }
-                    else if (PARAMS.dynamicMode === 'slide') {
-                        // 利用取餘數 (%2) 判斷奇偶數列，讓它們往反方向滑動
+                    } else if (PARAMS.dynamicMode === 'slide') {
                         let direction = (j % 2 === 0) ? 1 : -1;
                         moveX = wave * (cellW * 1.5) * direction;
-                    }
-                    else if (PARAMS.dynamicMode === 'jitter') {
-                        // 利用 random() 產生高頻率的不規則震動
+                    } else if (PARAMS.dynamicMode === 'jitter') {
                         moveX = random(-5, 5) * (PARAMS.speed * 100);
                         moveY = random(-5, 5) * (PARAMS.speed * 100);
-                        // 抖動模式下保留輕微的隨機旋轉
                         dynamicAngle = random(-5, 5) * (PARAMS.speed * 100);
                     }
 
@@ -160,13 +200,28 @@
                     rotate(radians(dynamicAngle));
                     scale(dynamicScale);
 
+                    let finalColor;
+                    if (PARAMS.isGradient) {
+                        let lerpAmount = map(wave, -1, 1, 0, 1);
+                        finalColor = lerpColor(color(PARAMS.colorStart), color(PARAMS.colorEnd), lerpAmount);
+                    } else {
+                        finalColor = color(PARAMS.color);
+                    }
+
+                    if (PARAMS.isWireframe || PARAMS.shape === 'line') {
+                        noFill();
+                        stroke(finalColor);
+                        strokeWeight(PARAMS.shape === 'line' ? 3 : 2);
+                    } else {
+                        noStroke();
+                        fill(finalColor);
+                    }
+
                     if (PARAMS.shape === 'rect') {
                         rect(0, 0, cellW * 0.6, cellH * 0.6);
                     } else if (PARAMS.shape === 'circle') {
                         circle(0, 0, cellW * 0.6);
                     } else if (PARAMS.shape === 'line') {
-                        stroke(PARAMS.color);
-                        strokeWeight(3);
                         line(-cellW * 0.4, 0, cellW * 0.4, 0);
                     } else if (PARAMS.shape === 'text') {
                         textSize(cellW * 0.8);
