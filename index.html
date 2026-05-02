@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Creative Codind test</title>
+    <title>Martin的動態圖文生成藝術</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tweakpane@3.1.9/dist/tweakpane.min.js"></script>
@@ -19,69 +19,70 @@
 <body>
 
     <script>
-        // 準備一個變數來裝你上傳的圖片
         let customImage = null;
 
-        // 1. 擴充參數庫：加入文字內容與新的圖形選項
         const PARAMS = {
             columns: 12,
             rows: 8,
             baseScale: 1.0,
-            shape: 'text', // 預設改成文字模式
+            shape: 'text',
 
+            dynamicMode: 'wave', // 預設模式
             speed: 0.05,
             waveFrequency: 0.15,
             rotationAmp: 180,
 
-            color: '#ffffff', // 文字預設用白色比較明顯
+            color: '#ffffff',
             bgColor: '#141414',
             isWireframe: false,
 
-            textContent: 'M' // 預設文字
+            textContent: 'M'
         };
 
         const pane = new Tweakpane.Pane({ title: 'VJ 視覺控制台' });
 
         // --- 資料夾 1：網格與形狀 ---
         const f1 = pane.addFolder({ title: '網格與形狀' });
-        f1.addInput(PARAMS, 'columns', { min: 2, max: 50, step: 1, label: '直行數量' });
-        f1.addInput(PARAMS, 'rows', { min: 2, max: 50, step: 1, label: '橫列數量' });
-        f1.addInput(PARAMS, 'baseScale', { min: 0.1, max: 3.0, label: '基礎大小' });
-        // 選單新增「文字」與「自訂圖片」
+        f1.addInput(PARAMS, 'columns', { min: 1, max: 50, step: 1, label: '直行數量' });
+        f1.addInput(PARAMS, 'rows', { min: 1, max: 50, step: 1, label: '橫列數量' });
+        f1.addInput(PARAMS, 'baseScale', { min: 0.01, max: 3.0, label: '基礎大小' });
         f1.addInput(PARAMS, 'shape', {
             options: { 方塊: 'rect', 圓形: 'circle', 線條: 'line', 文字: 'text', 自訂圖片: 'image' },
             label: '圖形種類'
         });
 
-        // --- 資料夾 2：自訂素材匯入 (全新工作區) ---
+        // --- 資料夾 2：自訂素材匯入 ---
         const f2 = pane.addFolder({ title: '自訂素材匯入' });
         f2.addInput(PARAMS, 'textContent', { label: '輸入文字' });
 
-        // 隱藏的檔案上傳器 (網頁小技巧)
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
-        fileInput.accept = 'image/*'; // 只允許上傳圖片
+        fileInput.accept = 'image/*';
         fileInput.onchange = (e) => {
             const file = e.target.files[0];
             if (file) {
                 const url = URL.createObjectURL(file);
-                // p5.js 讀取圖片的語法
                 loadImage(url, (img) => {
                     customImage = img;
-                    PARAMS.shape = 'image'; // 上傳成功後，自動幫你把形狀切換成圖片模式
-                    pane.refresh(); // 刷新面板狀態
+                    PARAMS.shape = 'image';
+                    pane.refresh();
                 });
             }
         };
-        // 在面板上放一個按鈕，點擊時觸發隱藏的上傳器
         f2.addButton({ title: '📁 上傳本機圖片' }).on('click', () => {
             fileInput.click();
         });
 
         // --- 資料夾 3：波動力學 ---
         const f3 = pane.addFolder({ title: '波動力學' });
+        // 【修改】升級全新的動態模式
+        f3.addInput(PARAMS, 'dynamicMode', {
+            options: { 綜合波動: 'wave', 位置浮動: 'orbit', 滑動交錯: 'slide', 隨機抖動: 'jitter' },
+            label: '動態模式'
+        });
         f3.addInput(PARAMS, 'speed', { min: 0, max: 0.2, label: '流動速度' });
-        f3.addInput(PARAMS, 'waveFrequency', { min: 0.01, max: 0.5, label: '波浪密度' });
+        // 【修改】波浪密度最小值改為 0.00
+        f3.addInput(PARAMS, 'waveFrequency', { min: 0.00, max: 0.5, label: '波浪密度' });
         f3.addInput(PARAMS, 'rotationAmp', { min: 0, max: 360, label: '旋轉幅度' });
 
         // --- 資料夾 4：色彩與風格 ---
@@ -90,17 +91,21 @@
         f4.addInput(PARAMS, 'bgColor', { label: '背景色' });
         f4.addInput(PARAMS, 'isWireframe', { label: '線框模式' });
 
-
         function setup() {
             createCanvas(windowWidth, windowHeight);
             rectMode(CENTER);
-            imageMode(CENTER); // 讓圖片也從中心點繪製
-            textAlign(CENTER, CENTER); // 讓文字從中心點對齊，這樣旋轉才好看
-            textStyle(BOLD); // 文字加粗
+            imageMode(CENTER);
+            textAlign(CENTER, CENTER);
+            textStyle(BOLD);
         }
 
         function draw() {
-            background(PARAMS.bgColor);
+            // 隨機抖動模式搭配微透明背景，可以製造出殘影效果
+            if (PARAMS.dynamicMode === 'jitter') {
+                background(color(PARAMS.bgColor).levels[0], color(PARAMS.bgColor).levels[1], color(PARAMS.bgColor).levels[2], 50);
+            } else {
+                background(PARAMS.bgColor);
+            }
 
             if (PARAMS.isWireframe) {
                 noFill();
@@ -123,30 +128,53 @@
                     let offset = i * PARAMS.waveFrequency + j * PARAMS.waveFrequency;
                     let wave = sin(frameCount * PARAMS.speed + offset);
 
-                    let dynamicAngle = wave * PARAMS.rotationAmp;
-                    let dynamicScale = PARAMS.baseScale + wave * 0.5;
+                    let dynamicAngle = 0;
+                    let dynamicScale = PARAMS.baseScale;
+                    let moveX = 0;
+                    let moveY = 0;
+
+                    // 【核心邏輯】分配新的動態引擎
+                    if (PARAMS.dynamicMode === 'wave') {
+                        dynamicAngle = wave * PARAMS.rotationAmp;
+                        dynamicScale = PARAMS.baseScale + wave * 0.5;
+                    }
+                    else if (PARAMS.dynamicMode === 'orbit') {
+                        moveX = cos(frameCount * PARAMS.speed + offset) * (cellW * 0.5);
+                        moveY = sin(frameCount * PARAMS.speed + offset) * (cellH * 0.5);
+                    }
+                    else if (PARAMS.dynamicMode === 'slide') {
+                        // 利用取餘數 (%2) 判斷奇偶數列，讓它們往反方向滑動
+                        let direction = (j % 2 === 0) ? 1 : -1;
+                        moveX = wave * (cellW * 1.5) * direction;
+                    }
+                    else if (PARAMS.dynamicMode === 'jitter') {
+                        // 利用 random() 產生高頻率的不規則震動
+                        moveX = random(-5, 5) * (PARAMS.speed * 100);
+                        moveY = random(-5, 5) * (PARAMS.speed * 100);
+                        // 抖動模式下保留輕微的隨機旋轉
+                        dynamicAngle = random(-5, 5) * (PARAMS.speed * 100);
+                    }
 
                     push();
-                    translate(x, y);
+                    translate(x + moveX, y + moveY);
                     rotate(radians(dynamicAngle));
                     scale(dynamicScale);
 
-                    // --- 根據選擇繪製不同內容 ---
                     if (PARAMS.shape === 'rect') {
                         rect(0, 0, cellW * 0.6, cellH * 0.6);
                     } else if (PARAMS.shape === 'circle') {
                         circle(0, 0, cellW * 0.6);
                     } else if (PARAMS.shape === 'line') {
+                        stroke(PARAMS.color);
+                        strokeWeight(3);
                         line(-cellW * 0.4, 0, cellW * 0.4, 0);
                     } else if (PARAMS.shape === 'text') {
-                        textSize(cellW * 0.8); // 字體大小跟隨網格寬度
+                        textSize(cellW * 0.8);
                         text(PARAMS.textContent, 0, 0);
                     } else if (PARAMS.shape === 'image') {
                         if (customImage) {
-                            // 畫出圖片，限制大小在格子內
                             image(customImage, 0, 0, cellW * 0.8, cellH * 0.8);
                         } else {
-                            // 如果還沒上傳圖片，先畫一個叉叉當作佔位符
                             stroke(255, 50);
                             strokeWeight(1);
                             line(-10, -10, 10, 10);
