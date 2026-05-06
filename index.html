@@ -14,7 +14,6 @@
             overflow: hidden;
             background-color: #1a1a1a;
         }
-
         #hintMessage {
             position: fixed;
             bottom: 40px;
@@ -34,7 +33,6 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-
             #hintMessage.show {
                 opacity: 1;
             }
@@ -72,7 +70,7 @@
 
         const pane = new Tweakpane.Pane({ title: 'VJ 視覺控制台' });
 
-        // --- 資料夾 1：網格與形狀 ---
+        //網格與形狀
         const f1 = pane.addFolder({ title: '網格與形狀' });
         f1.addInput(PARAMS, 'columns', { min: 1, max: 50, step: 1, label: '直行數量' });
         f1.addInput(PARAMS, 'rows', { min: 1, max: 50, step: 1, label: '橫列數量' });
@@ -93,7 +91,7 @@
             }
         });
 
-        // --- 資料夾 2：自訂圖片匯入 ---
+        //自訂圖片匯入
         const f2 = pane.addFolder({ title: '自訂圖片匯入' });
 
         const fileInput = document.createElement('input');
@@ -121,7 +119,7 @@
             }
         });
 
-        // --- 資料夾 3：波動力學 ---
+        //波動力學
         const f3 = pane.addFolder({ title: '波動力學' });
         const dynamicModeSelect = f3.addInput(PARAMS, 'dynamicMode', {
             options: { 綜合波動: 'wave', 位置浮動: 'orbit', 滑動交錯: 'slide', 隨機抖動: 'jitter' },
@@ -157,7 +155,7 @@
             }
         });
 
-        // --- 資料夾 4：色彩與風格 ---
+        //色彩與風格
         const f4 = pane.addFolder({ title: '色彩與風格' });
         f4.addInput(PARAMS, 'bgColor', { label: '背景色' });
         f4.addInput(PARAMS, 'isWireframe', { label: '線框模式' });
@@ -178,7 +176,7 @@
             }
         });
 
-        // --- 【修改】資料夾 5：UI 介面設定預設展開 ---
+        //UI 介面設定預設展開
         const f5 = pane.addFolder({ title: 'UI 介面設定', expanded: true });
 
         f5.addButton({
@@ -187,7 +185,7 @@
             togglePane(true);
         });
 
-        // --- 快捷鍵與隱藏面板邏輯 ---
+        //快捷鍵與隱藏面板邏輯
         let isPaneHidden = false;
         let hintTimer = null;
         const hintEl = document.getElementById('hintMessage');
