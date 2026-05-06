@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Yang Yu-Hong 的動態圖文生成藝術</title>
+    <title>Creative Coding project</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tweakpane@3.1.9/dist/tweakpane.min.js"></script>
@@ -14,27 +14,51 @@
             overflow: hidden;
             background-color: #1a1a1a;
         }
+
+        #hintMessage {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 20, 20, 0.85);
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-family: sans-serif;
+            font-size: 15px;
+            letter-spacing: 2px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 9999;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+            #hintMessage.show {
+                opacity: 1;
+            }
     </style>
 </head>
 <body>
+
+    <div id="hintMessage">按 ESC 顯示控制台</div>
 
     <script>
         let customImage = null;
 
         const PARAMS = {
-            columns: 12,
-            rows: 8,
-            baseScale: 1.0,
+            columns: 3,
+            rows: 3,
+            baseScale: 0.15,
             shape: 'text',
-            textContent: 'Y',
+            textContent: 'hi',
 
             dynamicMode: 'wave',
-            //波浪的形狀模式
             wavePattern: 'linear',
             speed: 0.05,
             waveX: 0.15,
             waveY: 0.15,
-            // 專門控制圓形漣漪密度的變數
             radialDensity: 0.3,
             rotationAmp: 180,
 
@@ -79,7 +103,6 @@
             const file = e.target.files[0];
             if (file) {
                 const url = URL.createObjectURL(file);
-
                 loadImage(url, (img) => {
                     customImage = img;
                     PARAMS.shape = 'image';
@@ -88,11 +111,7 @@
                 });
             }
         };
-
-        f2.addButton({ title: '📁 上傳本機圖片' }).on('click', () => {
-            fileInput.click();
-        });
-
+        f2.addButton({ title: '📁 上傳本機圖片' }).on('click', () => { fileInput.click(); });
         f2.addButton({ title: '🗑️ 移除圖片' }).on('click', () => {
             customImage = null;
             fileInput.value = '';
@@ -104,28 +123,20 @@
 
         // --- 資料夾 3：波動力學 ---
         const f3 = pane.addFolder({ title: '波動力學' });
-
         const dynamicModeSelect = f3.addInput(PARAMS, 'dynamicMode', {
             options: { 綜合波動: 'wave', 位置浮動: 'orbit', 滑動交錯: 'slide', 隨機抖動: 'jitter' },
             label: '動態模式'
         });
-
-        // 【新增】選擇直線波浪還是向心漣漪
         const wavePatternSelect = f3.addInput(PARAMS, 'wavePattern', {
             options: { 直線平移: 'linear', 中心漣漪: 'radial' },
             label: '波浪形狀'
         });
-
         f3.addInput(PARAMS, 'speed', { min: 0, max: 0.2, label: '流動速度' });
-
         const waveXInput = f3.addInput(PARAMS, 'waveX', { min: -0.5, max: 0.5, label: 'X軸 波浪方向' });
         const waveYInput = f3.addInput(PARAMS, 'waveY', { min: -0.5, max: 0.5, label: 'Y軸 波浪方向' });
-        // 【新增】漣漪專用的控制桿
         const radialInput = f3.addInput(PARAMS, 'radialDensity', { min: -0.5, max: 0.5, label: '漣漪(正內縮/負外擴)', hidden: true });
-
         const rotAmpInput = f3.addInput(PARAMS, 'rotationAmp', { min: 0, max: 360, label: '旋轉幅度' });
 
-        // 監聽波浪形狀：切換顯示對應的控制桿
         wavePatternSelect.on('change', (ev) => {
             if (ev.value === 'linear') {
                 waveXInput.hidden = false;
@@ -138,7 +149,6 @@
             }
         });
 
-        // 監聽動態模式：只隱藏與波浪無關的旋轉幅度
         dynamicModeSelect.on('change', (ev) => {
             if (ev.value === 'wave') {
                 rotAmpInput.hidden = false;
@@ -151,10 +161,8 @@
         const f4 = pane.addFolder({ title: '色彩與風格' });
         f4.addInput(PARAMS, 'bgColor', { label: '背景色' });
         f4.addInput(PARAMS, 'isWireframe', { label: '線框模式' });
-
         const colorInput = f4.addInput(PARAMS, 'color', { label: '單一主色調' });
         const gradSwitch = f4.addInput(PARAMS, 'isGradient', { label: '開啟雙色漸變' });
-
         const cStart = f4.addInput(PARAMS, 'colorStart', { label: '漸變起點色', hidden: true });
         const cEnd = f4.addInput(PARAMS, 'colorEnd', { label: '漸變終點色', hidden: true });
 
@@ -168,6 +176,51 @@
                 cStart.hidden = true;
                 cEnd.hidden = true;
             }
+        });
+
+        // --- 【修改】資料夾 5：UI 介面設定預設展開 ---
+        const f5 = pane.addFolder({ title: 'UI 介面設定', expanded: true });
+
+        f5.addButton({
+            title: '🚫 隱藏控制台',
+        }).on('click', () => {
+            togglePane(true);
+        });
+
+        // --- 快捷鍵與隱藏面板邏輯 ---
+        let isPaneHidden = false;
+        let hintTimer = null;
+        const hintEl = document.getElementById('hintMessage');
+
+        function showHint() {
+            hintEl.classList.add('show');
+            if (hintTimer) clearTimeout(hintTimer);
+            hintTimer = setTimeout(() => {
+                hintEl.classList.remove('show');
+            }, 2000);
+        }
+
+        function togglePane(forceHide = null) {
+            isPaneHidden = (forceHide !== null) ? forceHide : !isPaneHidden;
+            const tpElement = document.querySelector('.tp-dfwv');
+            if (tpElement) {
+                tpElement.style.display = isPaneHidden ? 'none' : 'block';
+            }
+
+            if (isPaneHidden) {
+                showHint();
+            } else {
+                hintEl.classList.remove('show');
+                if (hintTimer) clearTimeout(hintTimer);
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') togglePane();
+        });
+
+        window.addEventListener('mousedown', () => {
+            if (isPaneHidden) showHint();
         });
 
         function setup() {
@@ -190,29 +243,21 @@
 
             for (let i = 0; i < PARAMS.columns; i++) {
                 for (let j = 0; j < PARAMS.rows; j++) {
-
                     let x = i * cellW + cellW / 2;
                     let y = j * cellH + cellH / 2;
-
                     let offset = 0;
 
-                    // 判斷直線波浪還是中心漣漪 
                     if (PARAMS.wavePattern === 'linear') {
                         offset = i * PARAMS.waveX + j * PARAMS.waveY;
                     } else if (PARAMS.wavePattern === 'radial') {
-                        // 計算這個格子距離正中心的距離
                         let centerX = (PARAMS.columns - 1) / 2.0;
                         let centerY = (PARAMS.rows - 1) / 2.0;
                         let d = dist(i, j, centerX, centerY);
-                        offset = d * PARAMS.radialDensity; // 用距離來產生波浪相位
+                        offset = d * PARAMS.radialDensity;
                     }
 
                     let wave = sin(frameCount * PARAMS.speed + offset);
-
-                    let dynamicAngle = 0;
-                    let dynamicScale = PARAMS.baseScale;
-                    let moveX = 0;
-                    let moveY = 0;
+                    let dynamicAngle = 0, dynamicScale = PARAMS.baseScale, moveX = 0, moveY = 0;
 
                     if (PARAMS.dynamicMode === 'wave') {
                         dynamicAngle = wave * PARAMS.rotationAmp;
@@ -243,42 +288,25 @@
                     }
 
                     if (PARAMS.isWireframe || PARAMS.shape === 'line') {
-                        noFill();
-                        stroke(finalColor);
-                        strokeWeight(PARAMS.shape === 'line' ? 3 : 2);
+                        noFill(); stroke(finalColor); strokeWeight(PARAMS.shape === 'line' ? 3 : 2);
                     } else {
-                        noStroke();
-                        fill(finalColor);
+                        noStroke(); fill(finalColor);
                     }
 
-                    if (PARAMS.shape === 'rect') {
-                        rect(0, 0, cellW * 0.6, cellH * 0.6);
-                    } else if (PARAMS.shape === 'circle') {
-                        circle(0, 0, cellW * 0.6);
-                    } else if (PARAMS.shape === 'line') {
-                        line(-cellW * 0.4, 0, cellW * 0.4, 0);
-                    } else if (PARAMS.shape === 'text') {
-                        textSize(cellW * 0.8);
-                        text(PARAMS.textContent, 0, 0);
-                    } else if (PARAMS.shape === 'image') {
-                        if (customImage) {
-                            image(customImage, 0, 0, cellW * 0.8, cellH * 0.8);
-                        } else {
-                            stroke(255, 50);
-                            strokeWeight(1);
-                            line(-10, -10, 10, 10);
-                            line(-10, 10, 10, -10);
-                        }
+                    if (PARAMS.shape === 'rect') rect(0, 0, cellW * 0.6, cellH * 0.6);
+                    else if (PARAMS.shape === 'circle') circle(0, 0, cellW * 0.6);
+                    else if (PARAMS.shape === 'line') line(-cellW * 0.4, 0, cellW * 0.4, 0);
+                    else if (PARAMS.shape === 'text') { textSize(cellW * 0.8); text(PARAMS.textContent, 0, 0); }
+                    else if (PARAMS.shape === 'image') {
+                        if (customImage) image(customImage, 0, 0, cellW * 0.8, cellH * 0.8);
+                        else { stroke(255, 50); strokeWeight(1); line(-10, -10, 10, 10); line(-10, 10, 10, -10); }
                     }
-
                     pop();
                 }
             }
         }
 
-        function windowResized() {
-            resizeCanvas(windowWidth, windowHeight);
-        }
+        function windowResized() { resizeCanvas(windowWidth, windowHeight); }
     </script>
 </body>
 </html>
